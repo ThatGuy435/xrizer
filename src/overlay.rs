@@ -994,7 +994,20 @@ impl vr::IVROverlay027_Interface for OverlayMan {
         if transform.is_null() {
             vr::EVROverlayError::InvalidParameter
         } else {
-            overlay.transform = Some((origin, unsafe { transform.read() }));
+            let transform = unsafe { transform.read() };
+            let xr_transform: xr::Posef = transform.into();
+            let o = xr_transform.orientation;
+            let q = Quat::from_xyzw(o.x, o.y, o.z, o.w).normalize();
+            let transform = xr::Posef {
+                position: xr_transform.position,
+                orientation: xr::Quaternionf {
+                    x: q.x,
+                    y: q.y,
+                    z: q.z,
+                    w: q.w,
+                },
+            };
+            overlay.transform = Some((origin, transform.into()));
             debug!(
                 "set overlay transform origin to {origin:?} for {:?}",
                 overlay.name
