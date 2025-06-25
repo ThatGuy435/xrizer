@@ -4,6 +4,11 @@ version = "0.2.0"
 edition = "2021"
 resolver = "2"
 rust-version = "1.83"
+license = "GPL-3.0-or-later"
+license-file = "LICENSE"
+description = "XR-ize your favorite OpenVR games"
+repository = "https://github.com/Supreeeme/xrizer"
+readme = "README.md"
 
 [lib]
 crate-type = ["cdylib"]
