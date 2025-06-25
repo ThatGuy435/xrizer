@@ -22,7 +22,7 @@ ash = "0.38.0"
 openxr = { git = "https://github.com/ralith/openxrs", rev = "d0afdd3", version = "0.19.0", features = ["static"] }
 openxr-sys = { git = "https://github.com/ralith/openxrs", rev = "d0afdd3", version = "0.11.0" }
 slotmap = "1.0.7"
-glam = "0.29.0"
+glam = "0.30.4"
 log = "0.4.22"
 tracy-client = "0.17.6"
 
@@ -41,13 +41,13 @@ serde_json = "1.0.127"
 slotmap = { workspace = true }
 time = { version = "0.3.36", features = ["formatting", "local-offset", "macros"] }
 tracy-client = { workspace = true, features = ["only-localhost", "demangle"], optional = true }
-egui = "0.28.1"
-egui-miniquad = "0.15.0"
-miniquad = "=0.4.0"
-webbrowser = "0.5.5"
+egui = "0.31.1"
+egui-miniquad = "0.16"
+miniquad = "0.4.8"
+webbrowser = "1.0.5"
 glutin_glx_sys = "0.6.0"
 libc = "0.2.169"
-derive_more = { version = "1.0.0", features = ["deref", "from", "try_into"] }
+derive_more = { version = "2.0.1", features = ["deref", "from", "try_into"] }
 gl = "0.14.0"
 
 [build-dependencies]

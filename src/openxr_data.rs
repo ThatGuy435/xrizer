@@ -3,7 +3,7 @@ use crate::{
     graphics_backends::{supported_apis_enum, GraphicsBackend, VulkanData},
     input::{InteractionProfile, Profiles},
 };
-use derive_more::{Deref, From, TryInto};
+use derive_more::Deref;
 use glam::f32::{Quat, Vec3};
 use log::{info, warn};
 use openvr as vr;

@@ -160,11 +160,6 @@ fn init_logging() {
             }));
         }
 
-        // safety: who cares lol
-        unsafe {
-            time::util::local_offset::set_soundness(time::util::local_offset::Soundness::Unsound)
-        };
-
         builder
             .filter_level(log::LevelFilter::Info)
             .parse_default_env()

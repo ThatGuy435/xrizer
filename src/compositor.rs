@@ -1269,7 +1269,6 @@ pub use tests::FakeGraphicsData;
 mod tests {
     use super::*;
     use crate::graphics_backends::{GraphicsBackend, VulkanData};
-    use openxr::sys::pfn::DestroySpatialGraphNodeBindingMSFT;
     use std::cell::Cell;
     use std::ffi::CStr;
     use std::mem::MaybeUninit;
