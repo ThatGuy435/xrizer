@@ -1346,7 +1346,7 @@ impl<C: openxr_data::Compositor> Input<C> {
         // This function is called while a write lock is called on the session, and as such should
         // not use self.openxr.session_data.get().
         if let Some(path) = self.loaded_actions_path.get() {
-            self.load_action_manifest(data, path).unwrap();
+            let _ = self.load_action_manifest(data, path);
         }
     }
 

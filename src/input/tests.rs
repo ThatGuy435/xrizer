@@ -888,3 +888,13 @@ fn detect_controller_after_manifest_load() {
     frame();
     assert!(f.input.openxr.left_hand.connected());
 }
+
+#[test]
+fn empty_manifest() {
+    let f = Fixture::new();
+    f.input
+        .SetActionManifestPath(c"empty_manifest.json".as_ptr() as _);
+
+    f.input.openxr.restart_session();
+    assert!(f.input.action_map.read().unwrap().is_empty());
+}
