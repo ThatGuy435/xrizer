@@ -329,7 +329,8 @@ impl<C: openxr_data::Compositor> vr::IVRInput010_Interface for Input<C> {
         _: vr::VRInputValueHandle_t,
         _: bool,
     ) -> vr::EVRInputError {
-        todo!()
+        crate::warn_unimplemented!("OpenBindingUI");
+        vr::EVRInputError::None
     }
     fn IsUsingLegacyInput(&self) -> bool {
         todo!()
