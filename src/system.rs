@@ -706,10 +706,10 @@ impl vr::IVRSystem022_Interface for System {
         0
     }
     fn GetRawZeroPoseToStandingAbsoluteTrackingPose(&self) -> vr::HmdMatrix34_t {
-        todo!()
+        xr::Posef::IDENTITY.into()
     }
     fn GetSeatedZeroPoseToStandingAbsoluteTrackingPose(&self) -> vr::HmdMatrix34_t {
-        todo!()
+        xr::Posef::IDENTITY.into()
     }
     fn GetDeviceToAbsoluteTrackingPose(
         &self,
