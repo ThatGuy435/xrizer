@@ -509,11 +509,22 @@ impl vr::IVRSystem022_Interface for System {
     }
     fn GetMatrix34TrackedDeviceProperty(
         &self,
-        _: vr::TrackedDeviceIndex_t,
-        _: vr::ETrackedDeviceProperty,
-        _: *mut vr::ETrackedPropertyError,
+        device_index: vr::TrackedDeviceIndex_t,
+        prop: vr::ETrackedDeviceProperty,
+        err: *mut vr::ETrackedPropertyError,
     ) -> vr::HmdMatrix34_t {
-        todo!()
+        debug!(target: log_tags::TRACKED_PROP, "requesting matrix property: {prop:?} ({device_index})");
+        if !self.IsTrackedDeviceConnected(device_index) {
+            if let Some(err) = unsafe { err.as_mut() } {
+                *err = vr::ETrackedPropertyError::InvalidDevice;
+            }
+            return Default::default();
+        }
+
+        if let Some(err) = unsafe { err.as_mut() } {
+            *err = vr::ETrackedPropertyError::UnknownProperty;
+        }
+        Default::default()
     }
     fn GetUint64TrackedDeviceProperty(
         &self,
@@ -526,9 +537,11 @@ impl vr::IVRSystem022_Interface for System {
             if let Some(err) = unsafe { err.as_mut() } {
                 *err = vr::ETrackedPropertyError::InvalidDevice;
             }
+            return 0;
         }
+
         if let Some(err) = unsafe { err.as_mut() } {
-            *err = vr::ETrackedPropertyError::UnknownProperty;
+            *err = vr::ETrackedPropertyError::Success;
         }
 
         match device_index {
@@ -555,6 +568,7 @@ impl vr::IVRSystem022_Interface for System {
             if let Some(err) = unsafe { err.as_mut() } {
                 *err = vr::ETrackedPropertyError::InvalidDevice;
             }
+            return 0;
         }
 
         if let Some(err) = unsafe { err.as_mut() } {
