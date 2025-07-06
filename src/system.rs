@@ -69,7 +69,7 @@ impl ViewCache {
 
 #[derive(macros::InterfaceImpl)]
 #[interface = "IVRSystem"]
-#[versions(022, 021, 020, 019, 017, 016, 015, 014, 009)]
+#[versions(022, 021, 020, 019, 017, 016, 015, 014, 012, 009)]
 pub struct System {
     openxr: Arc<RealOpenXrData>, // We don't need to test session restarting.
     input: Injected<Input<crate::compositor::Compositor>>,
@@ -830,13 +830,53 @@ impl vr::IVRSystem014On015 for System {
     }
 }
 
-impl vr::IVRSystem009On014 for System {
+impl vr::IVRSystem012On014 for System {
     fn ComputeDistortion(&self, eye: vr::EVREye, u: f32, v: f32) -> vr::DistortionCoordinates_t {
         let mut ret = vr::DistortionCoordinates_t::default();
         <Self as vr::IVRSystem022_Interface>::ComputeDistortion(self, eye, u, v, &mut ret);
         ret
     }
 
+    fn GetHiddenAreaMesh(&self, eye: vr::EVREye) -> vr::HiddenAreaMesh_t {
+        <Self as vr::IVRSystem022_Interface>::GetHiddenAreaMesh(
+            self,
+            eye,
+            vr::EHiddenAreaMeshType::Standard,
+        )
+    }
+
+    fn GetControllerState(
+        &self,
+        device_index: vr::TrackedDeviceIndex_t,
+        state: *mut vr::VRControllerState_t,
+    ) -> bool {
+        <Self as vr::IVRSystem022_Interface>::GetControllerState(
+            self,
+            device_index,
+            state,
+            std::mem::size_of::<vr::VRControllerState_t>() as u32,
+        )
+    }
+
+    fn GetControllerStateWithPose(
+        &self,
+        origin: vr::ETrackingUniverseOrigin,
+        device_index: vr::TrackedDeviceIndex_t,
+        state: *mut vr::VRControllerState_t,
+        device_pose: *mut vr::TrackedDevicePose_t,
+    ) -> bool {
+        <Self as vr::IVRSystem022_Interface>::GetControllerStateWithPose(
+            self,
+            origin,
+            device_index,
+            state,
+            std::mem::size_of::<vr::VRControllerState_t>() as u32,
+            device_pose,
+        )
+    }
+}
+
+impl vr::IVRSystem009On012 for System {
     fn PollNextEvent(&self, event: *mut vr::vr_0_9_12::VREvent_t) -> bool {
         self.PollNextEventWithPose(
             vr::ETrackingUniverseOrigin::Seated,
@@ -887,44 +927,6 @@ impl vr::IVRSystem009On014 for System {
         }
 
         ret
-    }
-
-    fn GetHiddenAreaMesh(&self, eye: vr::EVREye) -> vr::HiddenAreaMesh_t {
-        <Self as vr::IVRSystem022_Interface>::GetHiddenAreaMesh(
-            self,
-            eye,
-            vr::EHiddenAreaMeshType::Standard,
-        )
-    }
-
-    fn GetControllerState(
-        &self,
-        device_index: vr::TrackedDeviceIndex_t,
-        state: *mut vr::VRControllerState_t,
-    ) -> bool {
-        <Self as vr::IVRSystem022_Interface>::GetControllerState(
-            self,
-            device_index,
-            state,
-            std::mem::size_of::<vr::VRControllerState_t>() as u32,
-        )
-    }
-
-    fn GetControllerStateWithPose(
-        &self,
-        origin: vr::ETrackingUniverseOrigin,
-        device_index: vr::TrackedDeviceIndex_t,
-        state: *mut vr::VRControllerState_t,
-        device_pose: *mut vr::TrackedDevicePose_t,
-    ) -> bool {
-        <Self as vr::IVRSystem022_Interface>::GetControllerStateWithPose(
-            self,
-            origin,
-            device_index,
-            state,
-            std::mem::size_of::<vr::VRControllerState_t>() as u32,
-            device_pose,
-        )
     }
 }
 

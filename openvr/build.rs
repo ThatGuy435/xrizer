@@ -104,6 +104,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         version!(1, 0, 7),
         version!(1, 0, 5),
         version!(1, 0, 4),
+        version!(1, 0, 3),
         version!(0, 9, 12),
     ];
     let mut pruned_headers = headers.map(|(header, version)| {
@@ -727,9 +728,17 @@ fn process_vr_namespace_content(
                 unversioned.insert(item.ident.to_string(), (item.into(), vr_mod.ident.clone()));
             }
             syn::Item::Struct(mut item) => {
-                let should_reversion = vr_mod.ident == "vr_0_9_12"
-                    && ["VREvent_t", "VREvent_Reserved_t", "Compositor_FrameTiming"]
-                        .contains(&item.ident.to_string().as_str());
+                static INCOMPAT_STRUCTS: &[(&str, &[&str])] = &[
+                    (
+                        "vr_0_9_12",
+                        &["VREvent_t", "VREvent_Reserved_t", "Compositor_FrameTiming"],
+                    ),
+                    ("vr_1_0_3", &["Compositor_FrameTiming"]),
+                ];
+                let should_reversion = INCOMPAT_STRUCTS
+                    .iter()
+                    .find(|(version, _)| vr_mod.ident == version)
+                    .is_some_and(|(_, structs)| structs.contains(&item.ident.to_string().as_str()));
 
                 for field in &mut item.fields {
                     unversion_type(&mut field.ty).unwrap();
