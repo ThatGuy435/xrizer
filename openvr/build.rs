@@ -1007,24 +1007,44 @@ fn generate_vtable_trait(
         let init: TokenStream = parse_quote!(#field_ident: #fn_name_fntable);
         fntable_init.push(init);
 
-        let inputs = f.inputs.iter().map(|arg| {
-            let ident = &arg.name.as_ref().unwrap().0;
-            if ident == "this" {
-                // replace this pointer with self
-                let self_ty: syn::Receiver = parse_quote! { &self };
-                syn::FnArg::Receiver(self_ty)
-            } else {
-                // pass through other types
-                ty_to_fnarg(ident, &arg.ty)
-            }
-        });
+        let inputs: Vec<syn::FnArg> = f
+            .inputs
+            .iter()
+            .map(|arg| {
+                let ident = &arg.name.as_ref().unwrap().0;
+                if ident == "this" {
+                    // replace this pointer with self
+                    let self_ty: syn::Receiver = parse_quote! { &self };
+                    syn::FnArg::Receiver(self_ty)
+                } else {
+                    // pass through other types
+                    ty_to_fnarg(ident, &arg.ty)
+                }
+            })
+            .collect();
 
         let trait_fn: syn::TraitItemFn = parse_quote! {
             fn #fn_name(#(#inputs),*) #fn_output;
         };
 
         if let Some((_, previous_trait_fns)) = previous_trait {
-            let block: syn::Block = if !previous_trait_fns.contains(&trait_fn.sig) {
+            fn args_to_types<'a>(
+                args: impl Iterator<Item = &'a syn::FnArg> + Clone,
+            ) -> impl Iterator<Item = &'a Box<syn::Type>> + Clone {
+                args.map(|arg| match arg {
+                    syn::FnArg::Receiver(r) => &r.ty,
+                    syn::FnArg::Typed(ty) => &ty.ty,
+                })
+            }
+
+            let input_types = args_to_types(inputs.iter());
+            let block: syn::Block = if !previous_trait_fns.iter().any(|prev_sig| {
+                if prev_sig.ident != fn_name {
+                    return false;
+                }
+                let arg_types = args_to_types(prev_sig.inputs.iter());
+                arg_types.eq(input_types.clone())
+            }) {
                 previous_incompatible_fns.push(trait_fn.clone());
                 let conv_trait = manual_conversion_trait_name.as_ref().unwrap();
                 // In the event that we need our conversion interface, we need to disambiguate the

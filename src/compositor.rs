@@ -865,12 +865,6 @@ impl vr::IVRCompositor028_Interface for Compositor {
     }
 }
 
-impl vr::IVRCompositor026On027 for Compositor {
-    fn FadeGrid(&self, seconds: f32, fade_in: bool) {
-        <Self as vr::IVRCompositor028_Interface>::FadeGrid(self, seconds, fade_in);
-    }
-}
-
 impl vr::IVRCompositor021On022 for Compositor {
     fn SetExplicitTimingMode(&self, explicit: bool) {
         let mode = if explicit {

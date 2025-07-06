@@ -1289,16 +1289,6 @@ impl vr::IVROverlay021On024 for OverlayMan {
     ) -> vr::EVROverlayError {
         todo!()
     }
-    fn SetOverlayRaw(
-        &self,
-        _: vr::VROverlayHandle_t,
-        _: *mut c_void,
-        _: u32,
-        _: u32,
-        _: u32,
-    ) -> vr::EVROverlayError {
-        todo!()
-    }
     fn GetOverlayDualAnalogTransform(
         &self,
         _: vr::VROverlayHandle_t,
@@ -1385,21 +1375,6 @@ impl vr::IVROverlay019On020 for OverlayMan {
     }
     fn SetHighQualityOverlay(&self, _: vr::VROverlayHandle_t) -> vr::EVROverlayError {
         unimplemented!()
-    }
-}
-
-impl vr::IVROverlay018On019 for OverlayMan {
-    #[inline]
-    fn SetOverlayDualAnalogTransform(
-        &self,
-        overlay: vr::VROverlayHandle_t,
-        which: vr::EDualAnalogWhich,
-        center: *const vr::HmdVector2_t,
-        radius: f32,
-    ) -> vr::EVROverlayError {
-        <Self as vr::IVROverlay021_Interface>::SetOverlayDualAnalogTransform(
-            self, overlay, which, center, radius,
-        )
     }
 }
 
