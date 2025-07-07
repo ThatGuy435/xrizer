@@ -1171,7 +1171,8 @@ impl vr::IVROverlay027_Interface for OverlayMan {
         _: f32,
         _: f32,
     ) -> vr::EVROverlayError {
-        todo!()
+        crate::warn_unimplemented!("SetOverlayColor");
+        vr::EVROverlayError::None
     }
     fn GetOverlayFlags(&self, _: vr::VROverlayHandle_t, _: *mut u32) -> vr::EVROverlayError {
         todo!()
