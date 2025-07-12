@@ -135,8 +135,8 @@ impl GraphicsBackend for GlData {
     }
 
     #[inline]
-    fn get_texture(texture: &openvr::Texture_t) -> Self::OpenVrTexture {
-        texture.handle as _
+    fn get_texture(texture: &vr::Texture_t) -> Option<Self::OpenVrTexture> {
+        Some(texture.handle as _)
     }
 
     #[inline]

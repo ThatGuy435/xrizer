@@ -142,8 +142,11 @@ impl Compositor {
         ctrl.with_any_graphics_mut::<begin_frame>(());
     }
 
-    pub fn initialize_real_session(&self, texture: &vr::Texture_t, bounds: vr::VRTextureBounds_t) {
-        info!("Creating real backend for texture type {:?}", texture.eType);
+    pub fn initialize_real_session(
+        &self,
+        texture: &vr::Texture_t,
+        bounds: vr::VRTextureBounds_t,
+    ) -> Result<(), vr::EVRCompositorError> {
         let backend = SupportedBackend::new(texture, bounds);
 
         #[macros::any_graphics(SupportedBackend)]
@@ -151,22 +154,28 @@ impl Compositor {
             backend: G,
             texture: &vr::Texture_t,
             bounds: vr::VRTextureBounds_t,
-        ) -> AnyTempBackendData
+        ) -> Result<AnyTempBackendData, vr::EVRCompositorError>
         where
             AnyTempBackendData: From<TempBackendData<G>>,
         {
-            let b_texture = G::get_texture(texture);
+            let b_texture =
+                G::get_texture(texture).ok_or(vr::EVRCompositorError::InvalidTexture)?;
             let info = backend.swapchain_info_for_texture(b_texture, bounds, texture.eColorSpace);
-            TempBackendData {
+            Ok(TempBackendData {
                 backend,
                 swapchain_create_info: Some(info),
             }
-            .into()
+            .into())
         }
-        *self.tmp_backend.lock().unwrap() =
-            Some(backend.with_any_graphics_owned::<swapchain_info>((texture, bounds)));
 
+        let tmp_backend = backend
+            .with_any_graphics_owned::<swapchain_info>((texture, bounds))
+            .inspect_err(|_| debug!("received invalid texture handle, not restarting session"))?;
+        *self.tmp_backend.lock().unwrap() = Some(tmp_backend);
+
+        info!("Creating real backend for texture type {:?}", texture.eType);
         self.openxr.restart_session();
+        Ok(())
     }
 }
 
@@ -510,9 +519,11 @@ impl vr::IVRCompositor028_Interface for Compositor {
         }
 
         let textures = unsafe { std::slice::from_raw_parts(pTextures, unTextureCount as _) };
-        overlays.set_skybox(&self.openxr.session_data.get(), textures);
-
-        vr::EVRCompositorError::None
+        if let Err(e) = overlays.set_skybox(&self.openxr.session_data.get(), textures) {
+            e
+        } else {
+            vr::EVRCompositorError::None
+        }
     }
     fn GetCurrentGridAlpha(&self) -> f32 {
         0.0
@@ -724,8 +735,10 @@ impl vr::IVRCompositor028_Interface for Compositor {
                 drop(frame_lock);
                 drop(session_lock);
 
-                info!("Received game texture, restarting session with new data");
-                self.initialize_real_session(texture, bounds);
+                if let Err(e) = self.initialize_real_session(texture, bounds) {
+                    return e;
+                }
+                info!("Received game texture, restarted session with new data");
 
                 session_lock = self.openxr.session_data.get();
                 frame_lock = session_lock.comp_data.0.lock().unwrap();
@@ -747,7 +760,8 @@ impl vr::IVRCompositor028_Interface for Compositor {
                 TryInto<&'d openxr_data::Session<G::Api>, Error: std::fmt::Display>,
             <G::Api as xr::Graphics>::Format: Eq + std::fmt::Debug,
         {
-            let real_texture = G::get_texture(texture);
+            let real_texture =
+                G::get_texture(texture).ok_or(vr::EVRCompositorError::InvalidTexture)?;
             ctrl.submit_impl(
                 session_data,
                 eye,
@@ -1352,8 +1366,8 @@ mod tests {
             self.vk.session_create_info()
         }
 
-        fn get_texture(texture: &openvr::Texture_t) -> Self::OpenVrTexture {
-            texture.handle.cast()
+        fn get_texture(texture: &openvr::Texture_t) -> Option<Self::OpenVrTexture> {
+            VulkanData::get_texture(texture)
         }
 
         fn swapchain_info_for_texture(

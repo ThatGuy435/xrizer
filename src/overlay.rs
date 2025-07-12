@@ -42,7 +42,11 @@ impl OverlayMan {
         }
     }
 
-    pub fn set_skybox(&self, session: &SessionData, textures: &[vr::Texture_t]) {
+    pub fn set_skybox(
+        &self,
+        session: &SessionData,
+        textures: &[vr::Texture_t],
+    ) -> Result<(), vr::EVRCompositorError> {
         // We don't yet follow HMD position, so the skybox needs to be
         // big enough so that the user never leaves it
         const SKYBOX_SIZE: f32 = 500.0;
@@ -58,7 +62,12 @@ impl OverlayMan {
                 let name = CString::new("__xrizer_skybox").unwrap();
                 let key = overlays.insert(Overlay::new(name.clone(), name));
                 let overlay = overlays.get_mut(key).unwrap();
-                overlay.set_texture(key, session, *textures.first().unwrap());
+                if overlay
+                    .set_texture(key, session, *textures.first().unwrap())
+                    .is_err()
+                {
+                    return Err(vr::EVRCompositorError::InvalidTexture);
+                };
                 overlay.visible = true;
                 overlay.width = SKYBOX_SIZE; // for equirect this becomes radius
                 overlay.kind = OverlayKind::Sphere;
@@ -71,7 +80,9 @@ impl OverlayMan {
                     let name = CString::new(format!("__xrizer_skybox_{}", idx)).unwrap();
                     let key = overlays.insert(Overlay::new(name.clone(), name));
                     let overlay = overlays.get_mut(key).unwrap();
-                    overlay.set_texture(key, session, *texture);
+                    if overlay.set_texture(key, session, *texture).is_err() {
+                        return Err(vr::EVRCompositorError::InvalidTexture);
+                    };
                     overlay.visible = true;
                     overlay.width = SKYBOX_SIZE * 2.0;
                     overlay.kind = OverlayKind::Quad;
@@ -115,6 +126,8 @@ impl OverlayMan {
             }
             _ => unreachable!(),
         }
+
+        Ok(())
     }
 
     pub fn clear_skybox(&self) {
@@ -458,7 +471,7 @@ impl Overlay {
         key: OverlayKey,
         session_data: &SessionData,
         texture: vr::Texture_t,
-    ) {
+    ) -> Result<(), vr::EVROverlayError> {
         let backend = self
             .compositor
             .get_or_insert_with(|| SupportedBackend::new(&texture, self.bounds));
@@ -483,7 +496,7 @@ impl Overlay {
             map: &mut AnySwapchainMap,
             key: OverlayKey,
             texture: vr::Texture_t,
-        ) -> xr::Extent2Di
+        ) -> Result<xr::Extent2Di, vr::EVROverlayError>
         where
             for<'a> &'a mut SwapchainMap<G::Api>:
                 TryFrom<&'a mut AnySwapchainMap, Error: std::fmt::Display>,
@@ -496,7 +509,10 @@ impl Overlay {
                     std::any::type_name::<G::Api>()
                 );
             });
-            let b_texture = G::get_texture(&texture);
+            let Some(b_texture) = G::get_texture(&texture) else {
+                debug!("received invalid overlay texture handle");
+                return Err(vr::EVROverlayError::InvalidTexture);
+            };
             let tex_swapchain_info =
                 backend.swapchain_info_for_texture(b_texture, texture_bounds, texture.eColorSpace);
             let mut create_swapchain = || {
@@ -534,7 +550,7 @@ impl Overlay {
             let extent = backend.copy_overlay_to_swapchain(b_texture, texture_bounds, idx as usize);
             swapchain.release_image().unwrap();
 
-            extent
+            Ok(extent)
         }
 
         let backend = self.compositor.as_mut().unwrap();
@@ -544,11 +560,12 @@ impl Overlay {
             swapchains,
             key,
             texture,
-        ));
+        ))?;
         self.rect = Some(xr::Rect2Di {
             extent,
             offset: xr::Offset2Di::default(),
         });
+        Ok(())
     }
 }
 
@@ -677,16 +694,24 @@ impl vr::IVROverlay027_Interface for OverlayMan {
             vr::EVROverlayError::InvalidParameter
         } else {
             let texture = unsafe { texture.read() };
-            if !self.openxr.session_data.get().is_real_session() {
-                self.compositor
+            if !self.openxr.session_data.get().is_real_session()
+                && self
+                    .compositor
                     .get()
                     .expect("Need to restart session, but compositor hasn't been set up...")
-                    .initialize_real_session(&texture, overlay.bounds);
+                    .initialize_real_session(&texture, overlay.bounds)
+                    .is_err()
+            {
+                return vr::EVROverlayError::InvalidTexture;
             }
             let key = OverlayKey::from(KeyData::from_ffi(handle));
-            overlay.set_texture(key, &self.openxr.session_data.get(), texture);
-            debug!("set overlay texture for {:?}", overlay.name);
-            vr::EVROverlayError::None
+            match overlay.set_texture(key, &self.openxr.session_data.get(), texture) {
+                Ok(_) => {
+                    debug!("set overlay texture for {:?}", overlay.name);
+                    vr::EVROverlayError::None
+                }
+                Err(e) => e,
+            }
         }
     }
 
@@ -1024,7 +1049,7 @@ impl vr::IVROverlay027_Interface for OverlayMan {
             };
             overlay.transform = Some((origin, transform.into()));
             debug!(
-                "set overlay transform origin to {origin:?} for {:?}",
+                "set overlay transform origin to {origin:?} for {:?} ({transform:?})",
                 overlay.name
             );
             vr::EVROverlayError::None

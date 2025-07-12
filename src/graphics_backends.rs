@@ -16,7 +16,8 @@ pub trait GraphicsBackend: Into<SupportedBackend> {
 
     fn session_create_info(&self) -> <Self::Api as xr::Graphics>::SessionCreateInfo;
 
-    fn get_texture(texture: &vr::Texture_t) -> Self::OpenVrTexture;
+    /// Returns None if the texture is invalid.
+    fn get_texture(texture: &vr::Texture_t) -> Option<Self::OpenVrTexture>;
 
     fn swapchain_info_for_texture(
         &self,
