@@ -31,6 +31,9 @@ log = "0.4.22"
 tracy-client = "0.17.6"
 derive_more = { version = "2.0.1", features = ["deref", "from", "try_into"] }
 
+[lints]
+workspace = true
+
 [dependencies]
 ash = { workspace = true }
 env_logger = "0.11.5"

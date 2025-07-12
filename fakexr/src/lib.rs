@@ -67,7 +67,7 @@ impl UserPath {
         }
     }
 
-    fn to_path(&self) -> &'static str {
+    fn as_path(&self) -> &'static str {
         match self {
             Self::LeftHand => "/user/hand/left",
             Self::RightHand => "/user/hand/right",
@@ -145,7 +145,8 @@ macro_rules! fn_unimplemented_impl {
 
 fn_unimplemented_impl!(A, B, C, D, E, F);
 
-pub extern "system" fn get_instance_proc_addr(
+#[allow(clippy::missing_transmute_annotations, clippy::missing_safety_doc)]
+pub unsafe extern "system" fn get_instance_proc_addr(
     instance: xr::Instance,
     name: *const c_char,
     function: *mut Option<xr::pfn::VoidFunction>,
@@ -383,7 +384,7 @@ impl Instance {
                 .unwrap()
                 .get(key)
                 .cloned()
-                .map(|s| Some(s))
+                .map(Some)
                 .ok_or(())
         }
     }
@@ -530,7 +531,7 @@ impl Space {
             UserPath::LeftHand => &session.left_hand,
             UserPath::RightHand => &session.right_hand,
         };
-        let hand_path = hand.to_path();
+        let hand_path = hand.as_path();
         let profile = match hand_data.profile.load() {
             xr::Path::NULL => {
                 // no profile - no data
@@ -559,12 +560,9 @@ impl Space {
                 let val = instance.get_path_value(p).unwrap().unwrap();
                 val.starts_with(hand_path).then_some(val)
             })
-            .expect(&format!(
-                "expected binding for space for action {:?}",
-                action.name
-            ));
+            .unwrap_or_else(|| panic!("expected binding for space for action {:?}", action.name));
 
-        let pose = match binding.strip_prefix(hand.to_path()).unwrap() {
+        let pose = match binding.strip_prefix(hand.as_path()).unwrap() {
             "/input/grip/pose" => hand_data.grip_pose.load(),
             "/input/aim/pose" => hand_data.aim_pose.load(),
             other => panic!(
@@ -1089,7 +1087,7 @@ extern "system" fn suggest_interaction_profile_bindings(
             .suggested
             .lock()
             .unwrap()
-            .entry(profile_path.clone())
+            .entry(profile_path)
             .or_default()
             .push(binding);
     }
@@ -1122,7 +1120,7 @@ extern "system" fn sync_actions(
 ) -> xr::Result {
     let session = get_handle!(session_xr);
     for hand in [&session.left_hand, &session.right_hand] {
-        if let Some(profile) = hand.pending_profile.load().take() {
+        if let Some(profile) = hand.pending_profile.load() {
             hand.profile.store(profile);
             send_event(
                 &session.event_sender,
@@ -1319,7 +1317,7 @@ extern "system" fn get_current_interaction_profile(
     let Ok(val) = instance.get_path_value(user_path) else {
         return xr::Result::ERROR_PATH_INVALID;
     };
-    let profile = match val.as_ref().map(String::as_str) {
+    let profile = match val.as_deref() {
         Some("/user/hand/left") => session.left_hand.profile.load(),
         Some("/user/hand/right") => session.right_hand.profile.load(),
         _ => xr::Path::NULL,
@@ -1349,7 +1347,7 @@ extern "system" fn locate_space(
     assert_ne!(space, *LOCAL);
 
     let space = get_handle!(space);
-    let next = unsafe { *&raw mut (*location).next };
+    let next = unsafe { (*location).next };
     let mut out_loc = xr::SpaceLocation {
         ty: xr::SpaceLocation::TYPE,
         next,
@@ -1360,11 +1358,11 @@ extern "system" fn locate_space(
     if !next.is_null() {
         let header = next as *mut xr::BaseOutStructure;
         unsafe {
-            if *&raw mut (*header).ty == xr::SpaceVelocity::TYPE {
+            if (*header).ty == xr::SpaceVelocity::TYPE {
                 let velo = next as *mut xr::SpaceVelocity;
                 velo.write(xr::SpaceVelocity {
                     ty: xr::SpaceVelocity::TYPE,
-                    next: *&raw mut (*velo).next,
+                    next: (*velo).next,
                     velocity_flags: xr::SpaceVelocityFlags::EMPTY,
                     linear_velocity: Default::default(),
                     angular_velocity: Default::default(),
