@@ -142,7 +142,7 @@ impl Compositor {
         ctrl.with_any_graphics_mut::<begin_frame>(());
     }
 
-    fn initialize_real_session(&self, texture: &vr::Texture_t, bounds: vr::VRTextureBounds_t) {
+    pub fn initialize_real_session(&self, texture: &vr::Texture_t, bounds: vr::VRTextureBounds_t) {
         info!("Creating real backend for texture type {:?}", texture.eType);
         let backend = SupportedBackend::new(texture, bounds);
 
@@ -484,7 +484,7 @@ impl vr::IVRCompositor028_Interface for Compositor {
     ) -> vr::EVRCompositorError {
         let overlays = self
             .overlays
-            .force(|_| OverlayMan::new(self.openxr.clone()));
+            .force(|injector| OverlayMan::new(self.openxr.clone(), injector));
         if pTextures.is_null() {
             return vr::EVRCompositorError::RequestFailed;
         }
@@ -635,16 +635,17 @@ impl vr::IVRCompositor028_Interface for Compositor {
             ctrl.end_frame(session_data, system, display_time, overlays)
         }
 
-        if *self.frame_state.lock().unwrap() != FrameState::Begun {
-            return;
-        }
-
         let session_data = self.openxr.session_data.get();
         let mut frame_lock = session_data.comp_data.0.lock().unwrap();
         let Some(ctrl) = frame_lock.as_mut() else {
             debug!("no frame controller - not presenting frame");
             return;
         };
+
+        if *self.frame_state.lock().unwrap() != FrameState::Begun {
+            return;
+        }
+
         trace!("presenting frame");
         let system = self.system.force(|i| System::new(self.openxr.clone(), i));
         let display_time = self.openxr.display_time.get();
@@ -1826,5 +1827,36 @@ mod tests {
         f.comp.SubmitExplicitTimingData();
         assert_eq!(f.submit(vr::EVREye::Left), None);
         assert_eq!(f.submit(vr::EVREye::Right), None);
+    }
+
+    #[test]
+    fn submit_overlay_without_projection_layer() {
+        use crate::overlay::OverlayMan;
+        use vr::IVROverlay027_Interface;
+
+        let f = Fixture::new();
+        let overlays = Arc::new(OverlayMan::new(f.comp.openxr.clone(), &Injector::default()));
+        f.comp.overlays.set(Arc::downgrade(&overlays));
+        overlays.compositor.set(Arc::downgrade(&f.comp));
+
+        let mut overlay = 0;
+        assert_eq!(
+            overlays.CreateOverlay(
+                c"test_overlay".as_ptr(),
+                c"TestOverlay".as_ptr(),
+                &mut overlay
+            ),
+            vr::EVROverlayError::None
+        );
+
+        assert_eq!(f.wait_get_poses(), None);
+        assert_eq!(
+            overlays.SetOverlayTexture(overlay, &FakeGraphicsData::texture(&f.vk)),
+            vr::EVROverlayError::None
+        );
+        f.check_frame_state(fakexr::FrameState::Begun);
+        assert_eq!(overlays.ShowOverlay(overlay), vr::EVROverlayError::None);
+        f.comp.PostPresentHandoff();
+        f.check_frame_state(fakexr::FrameState::Ended);
     }
 }

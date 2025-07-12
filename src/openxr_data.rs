@@ -409,6 +409,10 @@ impl SessionData {
             GraphicalSession: From<Session<G>>,
             FrameStream: From<xr::FrameStream<G>>,
         {
+            info!(
+                "Creating OpenXR session with graphics API {}",
+                std::any::type_name::<G>()
+            );
             // required to call
             let _ = instance.graphics_requirements::<G>(system_id).unwrap();
 

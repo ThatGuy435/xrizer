@@ -1,4 +1,5 @@
 use crate::{
+    clientcore::{Injected, Injector},
     compositor::{is_usable_swapchain, Compositor},
     graphics_backends::{supported_apis_enum, GraphicsBackend, SupportedBackend},
     openxr_data::{GraphicalSession, OpenXrData, Session, SessionData},
@@ -22,16 +23,19 @@ pub const SKYBOX_Z_ORDER: i64 = -1;
 pub struct OverlayMan {
     vtables: Vtables,
     openxr: Arc<OpenXrData<Compositor>>,
+    /// should only be externally accessed for testing
+    pub(crate) compositor: Injected<Compositor>,
     overlays: RwLock<SlotMap<OverlayKey, Overlay>>,
     key_to_overlay: RwLock<HashMap<CString, OverlayKey>>,
     skybox: RwLock<Vec<OverlayKey>>,
 }
 
 impl OverlayMan {
-    pub fn new(openxr: Arc<OpenXrData<Compositor>>) -> Self {
+    pub fn new(openxr: Arc<OpenXrData<Compositor>>, injector: &Injector) -> Self {
         Self {
             vtables: Vtables::default(),
             openxr,
+            compositor: injector.inject(),
             overlays: Default::default(),
             key_to_overlay: Default::default(),
             skybox: Default::default(),
@@ -299,7 +303,7 @@ pub struct OverlayLayer<'a, G: xr::Graphics> {
 }
 
 impl<G: xr::Graphics> OverlayLayer<'_, G> {
-    pub fn set_alpha(&mut self, alpha: f32) {
+    fn set_alpha(&mut self, alpha: f32) {
         // only one instance is stored, so this would cause segfault due to UAF
         debug_assert!(
             self.color_bias_khr.is_none(),
@@ -475,7 +479,7 @@ impl Overlay {
         fn set_swapchain_texture<G: GraphicsBackend>(
             backend: &mut G,
             session_data: &SessionData,
-            overlay: &mut Overlay,
+            texture_bounds: vr::VRTextureBounds_t,
             map: &mut AnySwapchainMap,
             key: OverlayKey,
             texture: vr::Texture_t,
@@ -494,11 +498,11 @@ impl Overlay {
             });
             let b_texture = G::get_texture(&texture);
             let tex_swapchain_info =
-                backend.swapchain_info_for_texture(b_texture, overlay.bounds, texture.eColorSpace);
+                backend.swapchain_info_for_texture(b_texture, texture_bounds, texture.eColorSpace);
             let mut create_swapchain = || {
                 let mut info = backend.swapchain_info_for_texture(
                     b_texture,
-                    overlay.bounds,
+                    texture_bounds,
                     texture.eColorSpace,
                 );
                 let initial_format = info.format;
@@ -527,21 +531,20 @@ impl Overlay {
             let idx = swapchain.acquire_image().unwrap();
             swapchain.wait_image(xr::Duration::INFINITE).unwrap();
 
-            let extent = backend.copy_overlay_to_swapchain(b_texture, overlay.bounds, idx as usize);
+            let extent = backend.copy_overlay_to_swapchain(b_texture, texture_bounds, idx as usize);
             swapchain.release_image().unwrap();
 
             extent
         }
 
-        let mut backend = self.compositor.take().unwrap();
+        let backend = self.compositor.as_mut().unwrap();
         let extent = backend.with_any_graphics_mut::<set_swapchain_texture>((
             session_data,
-            self,
+            self.bounds,
             swapchains,
             key,
             texture,
         ));
-        self.compositor = Some(backend);
         self.rect = Some(xr::Rect2Di {
             extent,
             offset: xr::Offset2Di::default(),
@@ -674,6 +677,12 @@ impl vr::IVROverlay027_Interface for OverlayMan {
             vr::EVROverlayError::InvalidParameter
         } else {
             let texture = unsafe { texture.read() };
+            if !self.openxr.session_data.get().is_real_session() {
+                self.compositor
+                    .get()
+                    .expect("Need to restart session, but compositor hasn't been set up...")
+                    .initialize_real_session(&texture, overlay.bounds);
+            }
             let key = OverlayKey::from(KeyData::from_ffi(handle));
             overlay.set_texture(key, &self.openxr.session_data.get(), texture);
             debug!("set overlay texture for {:?}", overlay.name);
