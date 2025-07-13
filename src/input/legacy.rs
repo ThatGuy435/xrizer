@@ -521,12 +521,11 @@ mod tests {
 
                     assert_eq!(
                         mask, active_mask,
-                        "Button not active - state: {:b} | button mask: {mask:b}",
-                        mask
+                        "Button not active - state: {mask:b} | button mask: {mask:b}"
                     );
                 }
                 false => {
-                    assert_eq!(mask, 0, "Button should be inactive - state: {:b}", mask);
+                    assert_eq!(mask, 0, "Button should be inactive - state: {mask:b}");
                 }
             }
         };

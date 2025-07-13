@@ -329,7 +329,7 @@ impl BindingsProfileLoadContext<'_> {
     ) -> String {
         let name_only = output.rsplit_once('/').unwrap().1;
         let toggle_name = format!("{name_only}_tgl");
-        let as_name = format!("{}/{}", action_set_name, toggle_name);
+        let as_name = format!("{action_set_name}/{toggle_name}");
 
         let mut extra_data = self
             .extra_actions
@@ -429,8 +429,8 @@ impl BindingsProfileLoadContext<'_> {
         let force_name = format!("{name_only}_grabactionf");
         let value_name = format!("{name_only}_grabactionv");
 
-        let force_full_name = format!("{}/{}", action_set_name, force_name);
-        let value_full_name = format!("{}/{}", action_set_name, value_name);
+        let force_full_name = format!("{action_set_name}/{force_name}");
+        let value_full_name = format!("{action_set_name}/{value_name}");
 
         let mut data = self
             .extra_actions

@@ -179,7 +179,7 @@ fn init_logging() {
 
                 write!(buf, "[{now} {style}{:5}{style:#}", record.level())?;
                 if let Some(path) = record.module_path() {
-                    write!(buf, " {}", path)?;
+                    write!(buf, " {path}")?;
                 }
                 writeln!(buf, " {:?}] {}", std::thread::current().id(), record.args())
             })

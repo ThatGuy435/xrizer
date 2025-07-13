@@ -947,7 +947,7 @@ impl<C: openxr_data::Compositor> Input<C> {
                     Vector1 { action, .. } => xr::Binding::new(action, path),
                     Vector2 { action, .. } => xr::Binding::new(action, path),
                     Haptic(action) => xr::Binding::new(action, path),
-                    Skeleton { .. } | Pose { .. } => unreachable!(),
+                    Skeleton { .. } | Pose => unreachable!(),
                 }
             })
             .chain(legacy_bindings.binding_iter(context.legacy_actions))
@@ -1002,8 +1002,7 @@ fn handle_dpad_binding(
         let ret = context.actions.contains_key(output);
         if !ret {
             warn!(
-                "Couldn't find dpad action {} (for path {parent_path}, {direction:?})",
-                output
+                "Couldn't find dpad action {output} (for path {parent_path}, {direction:?})"
             );
         }
         ret.then_some(output)
@@ -1388,9 +1387,7 @@ fn handle_haptic_bindings(
 
         assert!(
             matches!(&context.actions[&output.0], super::ActionData::Haptic(_)),
-            "expected haptic action for haptic binding {}, got {}",
-            translated,
-            output
+            "expected haptic action for haptic binding {translated}, got {output}"
         );
         let xr_path = instance.string_to_path(&translated).unwrap();
         context.push_binding(output.0.clone(), xr_path);

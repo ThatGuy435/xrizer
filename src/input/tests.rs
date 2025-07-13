@@ -30,7 +30,7 @@ impl std::fmt::Debug for ActionData {
             ActionData::Bool(_) => f.write_str("InputAction::Bool"),
             ActionData::Vector1 { .. } => f.write_str("InputAction::Float"),
             ActionData::Vector2 { .. } => f.write_str("InputAction::Vector2"),
-            ActionData::Pose { .. } => f.write_str("InputAction::Pose"),
+            ActionData::Pose => f.write_str("InputAction::Pose"),
             ActionData::Skeleton { .. } => f.write_str("InputAction::Skeleton"),
             ActionData::Haptic(_) => f.write_str("InputAction::Haptic"),
         }

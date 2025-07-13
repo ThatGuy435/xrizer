@@ -514,7 +514,7 @@ impl vr::IVRCompositor028_Interface for Compositor {
                 log::debug!("Setting new box skybox");
             }
             _ => {
-                log::warn!("Invalid number of skybox textures: {}", unTextureCount);
+                log::warn!("Invalid number of skybox textures: {unTextureCount}");
                 return vr::EVRCompositorError::RequestFailed;
             }
         }

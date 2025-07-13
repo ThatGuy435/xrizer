@@ -766,7 +766,7 @@ impl<C: openxr_data::Compositor> vr::IVRInput010_Interface for Input<C> {
                 };
 
                 let Some(ty) = pose_type else {
-                    trace!("action has no bindings for the hand {:?}", hand);
+                    trace!("action has no bindings for the hand {hand:?}");
                     no_data!()
                 };
 

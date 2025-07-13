@@ -196,7 +196,7 @@ fn prune_header(header: &str, version: &str) -> String {
         "#define VR_COMPOSITOR",
     ];
 
-    let version = format!("vr_{}", version);
+    let version = format!("vr_{version}");
     let reader = BufReader::new(
         File::open(header).unwrap_or_else(|e| panic!("Couldn't open {header}: {e}")),
     );
@@ -529,8 +529,7 @@ fn versionify_interface(
     let version_str = version_item.to_token_stream().to_string();
     let caps = VERSION_REGEX.captures(&version_str).unwrap_or_else(|| {
         panic!(
-            "Couldn't find version number from version const ({})",
-            version_str
+            "Couldn't find version number from version const ({version_str})"
         )
     });
     let interface = caps.get(1).unwrap().as_str();
@@ -1002,7 +1001,7 @@ fn generate_vtable_trait(
     let interface_version_start_pos = interface_name.find(|c: char| c.is_numeric()).unwrap();
     let interface_ident = format_ident!("{interface_name}");
     let interface_no_version = &interface_name[0..interface_version_start_pos];
-    let struct_prefix = format!("{}_", interface_no_version);
+    let struct_prefix = format!("{interface_no_version}_");
     let trait_ident = format_ident!("{interface_name}_Interface");
     let mod_ident = format_ident!("{}", interface_name.to_lowercase());
 

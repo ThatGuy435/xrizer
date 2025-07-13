@@ -77,7 +77,7 @@ impl OverlayMan {
             6 => {
                 for (idx, texture) in textures.iter().enumerate() {
                     // 6 quads forming a cursed box
-                    let name = CString::new(format!("__xrizer_skybox_{}", idx)).unwrap();
+                    let name = CString::new(format!("__xrizer_skybox_{idx}")).unwrap();
                     let key = overlays.insert(Overlay::new(name.clone(), name));
                     let overlay = overlays.get_mut(key).unwrap();
                     if overlay.set_texture(key, session, *texture).is_err() {
@@ -178,7 +178,7 @@ impl OverlayMan {
                     .unwrap_or(session.current_origin),
             );
 
-            trace!("overlay rect: {:#?}", rect);
+            trace!("overlay rect: {rect:#?}");
 
             let pose = overlay
                 .transform

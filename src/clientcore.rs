@@ -65,9 +65,7 @@ impl ClientCore {
     pub fn new(version: &CStr) -> Option<Arc<Self>> {
         crate::init_logging();
 
-        if ![c"IVRClientCore_003", c"IVRClientCore_002"]
-            .iter()
-            .any(|s| *s == version)
+        if ![c"IVRClientCore_003", c"IVRClientCore_002"].contains(&version)
         {
             error!("Application requested unknown ClientCore version: {version:?}");
             return None;
