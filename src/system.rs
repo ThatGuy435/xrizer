@@ -778,7 +778,8 @@ impl vr::IVRSystem022_Interface for System {
 
 impl vr::IVRSystem021On022 for System {
     fn ResetSeatedZeroPose(&self) {
-        crate::warn_unimplemented!("ResetSeatedZeroPose");
+        self.openxr
+            .reset_tracking_space(vr::ETrackingUniverseOrigin::Seated);
     }
 }
 
