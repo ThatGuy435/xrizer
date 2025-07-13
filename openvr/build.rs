@@ -500,9 +500,9 @@ struct VersionedInterface {
 
 enum ImplItem {
     // Item that can go in a free impl block
-    Free(syn::ImplItem),
+    Free(Box<syn::ImplItem>),
     // Trait implementation block
-    TraitImpl(syn::ItemImpl),
+    TraitImpl(Box<syn::ItemImpl>),
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -528,9 +528,7 @@ fn versionify_interface(
     // Extract the version and struct name
     let version_str = version_item.to_token_stream().to_string();
     let caps = VERSION_REGEX.captures(&version_str).unwrap_or_else(|| {
-        panic!(
-            "Couldn't find version number from version const ({version_str})"
-        )
+        panic!("Couldn't find version number from version const ({version_str})")
     });
     let interface = caps.get(1).unwrap().as_str();
     let version_str = caps.get(2).unwrap().as_str();
@@ -703,9 +701,9 @@ fn process_vr_namespace_content(
                             }
                         }
                     }
-                    items.push(ImplItem::TraitImpl(item));
+                    items.push(ImplItem::TraitImpl(Box::new(item)));
                 } else {
-                    items.extend(item.items.into_iter().map(ImplItem::Free));
+                    items.extend(item.items.into_iter().map(|i| ImplItem::Free(Box::new(i))));
                 }
             }
             syn::Item::Enum(item) => {
@@ -934,7 +932,7 @@ fn process_and_versionify_types(tokens: TokenStream) -> String {
                         free_items.push(item);
                         None
                     }
-                    ImplItem::TraitImpl(item) => Some(item.into()),
+                    ImplItem::TraitImpl(item) => Some((*item).into()),
                 }));
                 if !free_items.is_empty() {
                     let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());

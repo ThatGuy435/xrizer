@@ -1001,9 +1001,7 @@ fn handle_dpad_binding(
         let output = &a.as_ref()?.output.0;
         let ret = context.actions.contains_key(output);
         if !ret {
-            warn!(
-                "Couldn't find dpad action {output} (for path {parent_path}, {direction:?})"
-            );
+            warn!("Couldn't find dpad action {output} (for path {parent_path}, {direction:?})");
         }
         ret.then_some(output)
     });
